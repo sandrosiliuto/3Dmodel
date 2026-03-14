@@ -1,0 +1,341 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { UploadCloud, Box, Zap, Loader } from 'lucide-react';
+
+const APP_NAME = "ssiliuto3dmodel";
+
+export default function App() {
+  const [currentView, setCurrentView] = useState('landing'); 
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-gray-100 font-sans selection:bg-blue-500">
+      {/* Navbar Minimalista */}
+      <nav className="border-b border-white/5 bg-black/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center cursor-pointer" onClick={() => setCurrentView('landing')}>
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 rounded-lg shadow-lg">
+              <Box className="h-6 w-6 text-white" />
+            </div>
+            <span className="ml-3 text-xl font-black tracking-tighter text-white uppercase italic">
+              {APP_NAME}
+            </span>
+          </div>
+          <button 
+            onClick={() => setCurrentView('app')}
+            className="bg-white text-black hover:bg-blue-500 hover:text-white px-6 py-2 rounded-full text-sm font-bold transition-all duration-300"
+          >
+            Launch Studio
+          </button>
+        </div>
+      </nav>
+
+      {/* Manejador de Vistas */}
+      <main>
+        {currentView === 'landing' ? (
+          <LandingPage onStart={() => setCurrentView('app')} />
+        ) : (
+          <StudioApp />
+        )}
+      </main>
+    </div>
+  );
+}
+
+function LandingPage({ onStart }) {
+  return (
+    <div className="relative overflow-hidden min-h-[calc(100vh-64px)] flex flex-col justify-center items-center text-center px-4">
+      <div className="max-w-4xl">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-widest mb-8">
+          <Zap className="w-3 h-3" /> Ultra Precision Engine v3.0
+        </div>
+        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-none">
+          RECONSTRUCCIÓN <br/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500">
+            3D DE ALTA CALIDAD
+          </span>
+        </h1>
+        <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
+          Motor profesional para la reconstrucción de mallas de alta densidad. Transforma cualquier imagen en una geometría con volumen real.
+        </p>
+        <button 
+          onClick={onStart}
+          className="bg-blue-600 hover:bg-blue-500 text-white px-12 py-5 rounded-2xl text-xl font-black transition-all shadow-2xl hover:shadow-blue-500/40"
+        >
+          INICIAR MODELADO
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StudioApp() {
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const [options, setOptions] = useState({ quality: 'ultra', depth: 0.8 });
+  
+  // Referencia segura a React (no más getElementById)
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      
+      // Uso de FileReader en lugar de URL.createObjectURL para evitar bloqueos del navegador
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewUrl(event.target.result);
+        setIsDone(false);
+      };
+      reader.readAsDataURL(selectedFile);
+    }
+  };
+
+  const runGeneration = () => {
+    if (!file) return;
+    setIsGenerating(true);
+    setTimeout(() => {
+      setIsGenerating(false);
+      setIsDone(true);
+    }, 1500);
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] bg-[#080808]">
+      {/* Sidebar de Control */}
+      <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/5 bg-black p-6 flex flex-col gap-6 flex-shrink-0 z-10">
+        <div>
+          <h2 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4">Fuente de Imagen</h2>
+          <div 
+            className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-blue-500/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all bg-white/5 relative group"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {previewUrl ? (
+              <img src={previewUrl} className="w-full h-full object-cover" alt="Source" />
+            ) : (
+              <UploadCloud className="w-8 h-8 text-white/20 group-hover:text-blue-500 transition-colors" />
+            )}
+            <input 
+              ref={fileInputRef} 
+              type="file" 
+              hidden 
+              onChange={handleFileChange} 
+              accept="image/*" 
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Ajustes de Malla</h2>
+          <div>
+            <div className="flex justify-between text-[10px] mb-2 font-bold uppercase">
+              <span>Profundidad Z</span>
+              <span className="text-blue-400">{options.depth}x</span>
+            </div>
+            <input 
+              type="range" min="0.1" max="2" step="0.1" 
+              value={options.depth} 
+              onChange={e => setOptions({...options, depth: parseFloat(e.target.value)})}
+              className="w-full accent-blue-600" 
+            />
+          </div>
+          
+          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+            <span className="text-[10px] font-bold block mb-2 opacity-50 uppercase">Densidad Geométrica</span>
+            <div className="flex gap-2">
+              {['high', 'ultra'].map(q => (
+                <button 
+                  key={q}
+                  onClick={() => setOptions({...options, quality: q})}
+                  className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase ${options.quality === q ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-black text-gray-500 hover:text-white'}`}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button 
+          onClick={runGeneration}
+          disabled={!file || isGenerating}
+          className="mt-auto py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 rounded-xl font-black text-white transition-all flex items-center justify-center gap-2"
+        >
+          {isGenerating ? <Loader className="animate-spin w-4 h-4" /> : <Zap className="w-4 h-4" />}
+          {isGenerating ? 'MALLA CALCULADA...' : 'CONSTRUIR 3D'}
+        </button>
+      </div>
+
+      {/* Visualizador 3D */}
+      <div className="flex-grow relative flex items-center justify-center bg-[#050505] overflow-hidden">
+        {isGenerating && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="text-center bg-black p-8 rounded-2xl border border-white/5">
+              <Loader className="animate-spin w-10 h-10 text-blue-500 mx-auto mb-4" />
+              <p className="text-xs font-black tracking-widest text-blue-400">PROCESANDO VOLUMEN</p>
+            </div>
+          </div>
+        )}
+
+        {isDone && previewUrl ? (
+          <ThreeDCanvas imageUrl={previewUrl} depth={options.depth} quality={options.quality} />
+        ) : (
+          <div className="text-center opacity-10">
+            <Box className="w-24 h-24 mx-auto mb-2" />
+            <p className="font-black uppercase tracking-widest text-sm">ESPERANDO FOTOGRAFÍA</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente Auto-Contenido del Visualizador 3D
+function ThreeDCanvas({ imageUrl, depth, quality }) {
+  const containerRef = useRef(null);
+  const [isEngineReady, setIsEngineReady] = useState(false);
+
+  // EFECTO 1: Inyección dinámica del Motor Three.js
+  useEffect(() => {
+    if (window.THREE) {
+      setIsEngineReady(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    script.async = true;
+    script.onload = () => setIsEngineReady(true);
+    document.head.appendChild(script);
+  }, []);
+
+  // EFECTO 2: Renderizado de la Escena
+  useEffect(() => {
+    if (!isEngineReady || !imageUrl || !containerRef.current) return;
+
+    const THREE = window.THREE;
+    let scene, camera, renderer, mesh, frameId;
+    const w = containerRef.current.clientWidth;
+    const h = containerRef.current.clientHeight;
+
+    // Configuración Base
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+    camera.position.z = 5;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    
+    // Limpiar contenedor por si hubo un re-render
+    containerRef.current.innerHTML = '';
+    containerRef.current.appendChild(renderer.domElement);
+
+    // Iluminación para resaltar el relieve
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(2, 2, 4);
+    scene.add(light);
+
+    const bluePoint = new THREE.PointLight(0x3b82f6, 1.5, 10);
+    bluePoint.position.set(-2, -1, 2);
+    scene.add(bluePoint);
+
+    // Carga de Textura y Creación de Malla
+    const loader = new THREE.TextureLoader();
+    loader.load(imageUrl, (tex) => {
+      // Malla de Ultra Resolución
+      const res = quality === 'ultra' ? 512 : 256;
+      const aspect = tex.image.height / tex.image.width;
+      const geo = new THREE.PlaneGeometry(3, 3 * aspect, res, res);
+      
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex,
+        displacementMap: tex,
+        displacementScale: depth,
+        displacementBias: -0.05,
+        roughness: 0.6,
+        metalness: 0.2,
+        side: THREE.DoubleSide
+      });
+
+      mesh = new THREE.Mesh(geo, mat);
+      
+      // Inclinación inicial dramática
+      mesh.rotation.x = -0.2;
+      mesh.rotation.y = 0.2;
+      
+      scene.add(mesh);
+    });
+
+    // Controles de Rotación
+    let mDown = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    const onMouseDown = (e) => { 
+      mDown = true; 
+      lastX = e.clientX; 
+      lastY = e.clientY; 
+    };
+    
+    const onMouseUp = () => { mDown = false; };
+    
+    const onMouseMove = (e) => {
+      if (!mDown || !mesh) return;
+      mesh.rotation.y += (e.clientX - lastX) * 0.007;
+      mesh.rotation.x += (e.clientY - lastY) * 0.007;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    };
+
+    const canvas = renderer.domElement;
+    canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+
+    // Bucle de renderizado
+    const renderLoop = () => {
+      frameId = requestAnimationFrame(renderLoop);
+      if (mesh && !mDown) {
+        mesh.rotation.y += 0.002; // Rotación automática fluida
+      }
+      renderer.render(scene, camera);
+    };
+    renderLoop();
+
+    // Limpieza de memoria
+    return () => {
+      cancelAnimationFrame(frameId);
+      canvas.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      
+      if (containerRef.current && renderer.domElement) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+      
+      scene.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) {
+          if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+          else o.material.dispose();
+        }
+      });
+      renderer.dispose();
+    };
+  }, [isEngineReady, imageUrl, depth, quality]);
+
+  return (
+    <div className="w-full h-full relative">
+      {!isEngineReady && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader className="animate-spin w-8 h-8 text-blue-500 opacity-50" />
+        </div>
+      )}
+      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+    </div>
+  );
+}
